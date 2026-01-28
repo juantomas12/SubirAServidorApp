@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Información de los directores</title>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link rel="stylesheet" th:href="@{/css/estilos.css}">
+</head>
+
+<body>
+	<div class="app-container">
+		<div class="card-shell">
+			<div class="d-flex justify-content-between align-items-center mb-3">
+				<h1 class="mb-0">Directores</h1>
+				<a class="btn btn-main btn-sm" th:href="@{/director/add}">Añadir director</a>
+			</div>
+
+			<div class="row g-3 align-items-end mb-3">
+				<div class="col-12 col-md-6">
+					<label for="filtro-directores" class="form-label mb-1">Buscar</label>
+					<input id="filtro-directores" type="search" class="form-control" placeholder="Nombre, año o id">
+				</div>
+				<div class="col-6 col-md-3">
+					<label for="orden-directores" class="form-label mb-1">Ordenar por</label>
+					<select id="orden-directores" class="form-select">
+						<option value="id-asc" selected>Id (ascendente)</option>
+						<option value="id-desc">Id (descendente)</option>
+						<option value="nombre-asc">Nombre (A-Z)</option>
+						<option value="nombre-desc">Nombre (Z-A)</option>
+						<option value="anyo-asc">Año nacimiento (asc)</option>
+						<option value="anyo-desc">Año nacimiento (desc)</option>
+					</select>
+				</div>
+				<div class="col-6 col-md-3 text-md-end">
+					<button id="limpiar-directores" type="button" class="btn btn-outline-light w-100">Limpiar filtros</button>
+				</div>
+			</div>
+
+			<div class="d-flex justify-content-between align-items-center mb-2 small text-muted">
+				<div id="contador-directores">Mostrando todos</div>
+				<div id="mensaje-sin-resultados" class="text-danger d-none">Sin coincidencias</div>
+			</div>
+			<div class="table-responsive">
+				<table id="tabla-directores" class="table table-hover align-middle">
+					<thead>
+						<tr>
+							<th>Id</th>
+							<th>Nombre</th>
+							<th>Año nacimiento</th>
+							<th colspan="3" class="text-center">Acciones</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr th:each="director:${directores}"
+							th:attr="data-id=${director.idDirector}, data-nombre=${#strings.toLowerCase(director.nombre)}, data-anyo=${director.anyoNacimiento}">
+							<td>
+							<a th:href="@{/director/{id}(id=${director.idDirector})}">
+								<span th:text="${director.idDirector}">Id</span></a>
+							</td>
+							<td th:text="${director.nombre}">Nombre</td>
+							<td th:text="${director.anyoNacimiento}">1990</td>
+							<td class="text-center"> 
+								<a class="btn btn-outline-light btn-sm" th:href="@{/director/update/{id}(id=${director.idDirector})}">
+								Editar</a>
+							</td>
+							<td class="text-center"> 
+								<a class="btn btn-outline-danger btn-sm" th:href="@{/director/delete/{id}(id=${director.idDirector})}">
+								Eliminar</a>
+							</td>
+							<td class="text-center d-flex gap-2 justify-content-center">
+								<a class="btn btn-outline-info btn-sm" th:href="@{/pelicula/director/{id}(id=${director.idDirector})}">Películas</a>
+								<a class="btn btn-outline-info btn-sm" th:href="@{/serie/director/{id}(id=${director.idDirector})}">Series</a>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="mt-3"><a th:href="@{/}">← Volver al índice</a></div>
+		</div>
+	</div>
+
+	<script>
+	(() => {
+	  const searchInput = document.getElementById('filtro-directores');
+	  const sortSelect = document.getElementById('orden-directores');
+	  const resetBtn = document.getElementById('limpiar-directores');
+	  const table = document.getElementById('tabla-directores');
+	  const tbody = table.querySelector('tbody');
+	  const counter = document.getElementById('contador-directores');
+	  const emptyMsg = document.getElementById('mensaje-sin-resultados');
+	  const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+	  const numberValue = (row, key) => parseInt(row.dataset[key] || '0', 10);
+	  const textValue = (row) => row.dataset.nombre || '';
+
+	  const applyChanges = () => {
+	    const term = searchInput.value.trim().toLowerCase();
+	    let filtered = allRows.filter((row) => {
+	      const nombre = textValue(row);
+	      const anyo = row.dataset.anyo || '';
+	      const id = row.dataset.id || '';
+	      return !term || nombre.includes(term) || anyo.includes(term) || id.includes(term);
+	    });
+
+	    filtered.sort((a, b) => {
+	      switch (sortSelect.value) {
+	        case 'nombre-asc':
+	          return textValue(a).localeCompare(textValue(b));
+	        case 'nombre-desc':
+	          return textValue(b).localeCompare(textValue(a));
+	        case 'anyo-asc':
+	          return numberValue(a, 'anyo') - numberValue(b, 'anyo');
+	        case 'anyo-desc':
+	          return numberValue(b, 'anyo') - numberValue(a, 'anyo');
+	        case 'id-desc':
+	          return numberValue(b, 'id') - numberValue(a, 'id');
+	        case 'id-asc':
+	        default:
+	          return numberValue(a, 'id') - numberValue(b, 'id');
+	      }
+	    });
+
+	    tbody.innerHTML = '';
+	    filtered.forEach((row) => tbody.appendChild(row));
+
+	    const total = allRows.length;
+	    const visibles = filtered.length;
+	    counter.textContent = `Mostrando ${visibles} de ${total} director${total === 1 ? '' : 'es'}`;
+	    emptyMsg.classList.toggle('d-none', visibles !== 0);
+	  };
+
+	  searchInput.addEventListener('input', applyChanges);
+	  sortSelect.addEventListener('change', applyChanges);
+	  resetBtn.addEventListener('click', () => {
+	    searchInput.value = '';
+	    sortSelect.value = 'id-asc';
+	    applyChanges();
+	  });
+
+	  applyChanges();
+	})();
+	</script>
+</body>
+</html>
